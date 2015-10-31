@@ -1,0 +1,29 @@
+---
+- config:
+    - testset: "Ensures openweathermap.org is working"
+    - variable_binds: { frankfurt_main: 'id=2925533' }
+    - generators:
+        - 'APPID': {type: 'env_variable', variable_name: 'OPENWEATHERMAP_API_KEY'}
+    - generator_binds: {APPID: APPID}
+
+- test:
+    - name: "Service is reachable and returns 401 (API key missing)"
+    - url: /data/2.5/weather
+    - expected_status: [401]
+
+- test:
+    - name: "API Key accepted?"
+    - generator_binds: {APPID: APPID}
+    - url: {template: "/data/2.5/weather?APPID=$APPID"}
+    - expected_status: [200]
+
+- test:
+    - name: "Did we actually got a response for Frankfurt am Main?"
+    - url: {template: "/data/2.5/weather?$frankfurt_main&APPID=$APPID"}
+    - expected_status: [200]
+    - validators:
+        - compare: {header: 'content-type', expected: 'application/json; charset=utf-8'}
+        - compare: {jsonpath_mini: "coord.lon", comparator: "equals", expected: 8.68}
+        - compare: {jsonpath_mini: "coord.lat", comparator: "equals", expected: 50.12}
+        - compare: {jsonpath_mini: "id", comparator: "equals", expected: 2925533}
+        - compare: {jsonpath_mini: "name", comparator: "equals", expected: "Frankfurt am Main"}
